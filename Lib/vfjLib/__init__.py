@@ -44,19 +44,28 @@ class attribdict(defaultdict):
 			return value
 		else:
 			object.__setattr__(self, name, value)
+
+	def __delattr__(self, name):
+		try:
+			return object.__delattr__(self, name)
+		except AttributeError:
+			return self.pop(name, None)
 					
 	def __repr__(self):
 		return '<%s: %s>' %(self.__class__.__name__, len(self.keys()))
 
-	def help(self):
-		tree_map = ['   .%s\t%s' %(key, type(value)) for key, value in zip(self.keys(), self.values())]
-		print('Attributes/Keys:\n%s' %('\n'.join(tree_map).expandtabs(30)))
+	def dir(self):
+		tree_map = ['   .%s\t%s' %(key, type(value)) for key, value in self.iteritems()]
+		print('Attributes (Keys) map:\n%s' %('\n'.join(tree_map).expandtabs(30)))
 
 	def factory(self, factory_type):
 		self.default_factory = factory_type
 
 	def lock(self):
 		self.default_factory = None
+
+	def iteritems(self):
+		return zip(self.keys(), self.values()) # Dirty Python 3 fix
 
 # -- Parsers
 class vfj_decoder(json.JSONDecoder):
