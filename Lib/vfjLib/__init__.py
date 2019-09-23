@@ -18,7 +18,7 @@ import os, json, json.scanner
 from vfjLib.object import attribdict
 from vfjLib.parser import vfj_decoder, vfj_encoder
 
-__version__ = '0.1.7'
+__version__ = '0.1.8'
 
 # - Objects -----------------------------------------
 class vfjFont(attribdict):
@@ -42,18 +42,28 @@ class vfjFont(attribdict):
 
 		for key, value in split.items():
 			if isinstance(value, dict):
-				json.dump(value, open(os.path.join(root, key), 'w'), cls=vfj_encoder)
+				item_name ='%s.%s'%(key, 'json')
+				json.dump(value, open(os.path.join(root, item_name), 'w'), cls=vfj_encoder)
 			
 			elif isinstance(value, list):
 				subfolder = os.path.join(root, key)
 				os.mkdir(subfolder)
 
 				for item_index in range(len(value)):
-					json.dump(value[item_index], open(os.path.join(root, key + str(item_index)), 'w'), cls=vfj_encoder)
+					item_name ='%s.%s'%(key, item_index)
+					
+					if value[item_index].has_key('name'):
+						item_name ='%s.%s'%(value[item_index].name, 'json')
+					elif value[item_index].has_key('tfn'):
+						item_name ='%s.%s'%(value[item_index].tfn, 'json')
+					elif value[item_index].has_key('fontMaster'):
+						item_name ='%s.%s'%(value[item_index].fontMaster.name, 'json')
+
+					json.dump(value[item_index], open(os.path.join(subfolder, item_name), 'w'), cls=vfj_encoder)
 			else:
 				agg[key] = value
 
-		json.dump(agg, open(os.path.join(root, 'more'), 'w'), cls=vfj_encoder)
+		json.dump(agg, open(os.path.join(root, 'more.json'), 'w'), cls=vfj_encoder)
 
 
 
