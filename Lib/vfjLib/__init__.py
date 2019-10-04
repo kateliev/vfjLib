@@ -12,8 +12,11 @@
 # No warranties. By using this you agree
 # that you use it at your own risk!
 
-from __future__ import absolute_import, unicode_literals, print_function
-import os, json, json.scanner
+from __future__ import absolute_import, print_function, unicode_literals
+
+import json
+import json.scanner
+import os
 
 from vfjLib.object import attribdict
 from vfjLib.parser import vfj_decoder, vfj_encoder
