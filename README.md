@@ -33,6 +33,12 @@ Attributes (Keys) map:
    .meta                      <class 'vfjLib.object.attribdict'>
    .settings                  <class 'vfjLib.object.attribdict'>
    .masters                   <class 'list'>
+>>> jfont.font.glyphs[-1].layers[0].elements[0].component.glyphName
+'l'
+>>> jfont.font.glyphs[-1].layers[0].elements[0].component.glyphName = 'n'
+>>> jfont.font.glyphs[-1].layers[0].elements[0].component.glyphName
+'n'
+>>> jfont.save('savedfont.vfj')
 ```
 
 ### License

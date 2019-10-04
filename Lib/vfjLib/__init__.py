@@ -23,7 +23,8 @@ __version__ = '0.1.8'
 # - Objects -----------------------------------------
 class vfjFont(attribdict):
 	def __init__(self, vfj_path):
-		self._vfj_read(vfj_path)
+		self.vfj_path = vfj_path
+		self._vfj_read(self.vfj_path)
 
 	def __repr__(self):
 		return '<%s name=%s, masters=%s, glyphs=%s, version=%s>' %(self.__class__.__name__, self.font.info.tfn, len(self.font.masters), self.font.glyphsCount, self.font.info.version)
@@ -32,7 +33,7 @@ class vfjFont(attribdict):
 		self.update(json.load(open(vfj_path, 'r'), cls=vfj_decoder))
 
 	def _vfj_write(self, vfj_path):
-		json.dump(open(vfj_path, 'w'), cls=vfj_encoder)
+		json.dump(self, open(vfj_path, 'w'), cls=vfj_encoder)
 
 	def split(self, path):
 		split = self.font
@@ -44,14 +45,14 @@ class vfjFont(attribdict):
 			if isinstance(value, dict):
 				item_name ='%s.%s'%(key, 'json')
 				json.dump(value, open(os.path.join(root, item_name), 'w'), cls=vfj_encoder)
-			
+
 			elif isinstance(value, list):
 				subfolder = os.path.join(root, key)
 				os.mkdir(subfolder)
 
 				for item_index in range(len(value)):
 					item_name ='%s.%s'%(key, item_index)
-					
+
 					if value[item_index].has_key('name'):
 						item_name ='%s.%s'%(value[item_index].name, 'json')
 					elif value[item_index].has_key('tfn'):
@@ -65,6 +66,7 @@ class vfjFont(attribdict):
 
 		json.dump(agg, open(os.path.join(root, 'more.json'), 'w'), cls=vfj_encoder)
 
-
-
-
+	def save(self, vfj_path = None):
+		if not vfj_path:
+			vfj_path = self.vfj_path
+		self._vfj_write(vfj_path)
