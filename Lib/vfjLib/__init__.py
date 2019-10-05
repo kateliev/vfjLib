@@ -21,7 +21,7 @@ import os
 from vfjLib.object import attribdict
 from vfjLib.parser import vfj_decoder, vfj_encoder
 
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 
 # - Deafaults --------------------------------------
 vfj_version = 8
