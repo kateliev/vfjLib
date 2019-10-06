@@ -18,14 +18,11 @@ import json
 import json.scanner
 import os
 
+from vfjLib.const import cfg_vfj
 from vfjLib.object import attribdict
-from vfjLib.parser import vfj_decoder, vfj_encoder
+from vfjLib.parser import vfj_decoder, vfj_encoder, string2filename
 
 __version__ = '0.1.9'
-
-# - Deafaults --------------------------------------
-vfj_version = 8
-vfj_split_suffix = 'json'
 
 # - Objects -----------------------------------------
 class vfjFont(attribdict):

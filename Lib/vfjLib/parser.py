@@ -13,6 +13,8 @@
 
 from __future__ import absolute_import, unicode_literals, print_function
 import json, json.scanner
+
+from vfjLib.const import cfg_fileName
 from vfjLib.object import attribdict
 
 __version__ = '0.1.8'
@@ -44,42 +46,38 @@ class vfj_encoder(json.JSONEncoder):
 # Note: Parts of the File and folder names parser are based on ufoLib/filenames.py
 # Note: Copyright (c) 2005-2018, The RoboFab Developers: Erik van Blokland, Tal Leming, Just van Rossum
 
-# --- List updated accoridng to https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
-illegalCharacters = r'\' * + / : < > ? [ \ ] | \0'.split(' ')
-illegalCharacters += [chr(i) for i in range(1, 32)]
-illegalCharacters += [chr(0x7F)]
-reservedFileNames += 'CLOCK$ A:-Z: CON PRN AUX NUL COM1 COM2 COM3 COM4 COM5 COM6 COM7 COM8 COM9 LPT1 LPT2 LPT3 LPT4 LPT5 LPT6 LPT7 LPT8 LPT9'.lower().split(' ')
-maxFileNameLength = 255
-
 def string2filename(string, suffix):
+	# - Init
+	cfg_file = cfg_fileName()
+
 	# - Initial test
 	if not isinstance(string, str):	raise ValueError('The value for string must be type(str)!')
 
 	# - Replace an initial period with an _
-	if string[0] == '.': string = '_' + string[1:]
+	if string[0] == '.': string = cfg_file.special + string[1:]
 	
 	# - Filter the user name
 	filtered_string = []
 	for character in string:
 		
-		if character in illegalCharacters: # replace illegal characters with _
-			character = '_'
+		if character in cfg_file.illegal: # replace illegal characters with _
+			character = cfg_file.special
 		
 		elif character != character.lower(): # add _ to all non-lower characters
-			character += '_'
+			character += cfg_file.special
 
 		filtered_string.append(character)
 
 	string = ''.join(filtered_string)
 
-	# - Clip to maxFileNameLength
-	string = string[:maxFileNameLength - len(suffix)]
+	# - Clip to maximum file length
+	string = string[:cfg_file.max_len - len(suffix)]
 
 	# - Test for illegal files names
 	parts = []
 	for part in string.split('.'):
-		if part.lower() in reservedFileNames:
-			part = '_' + part
+		if part.lower() in cfg_file.reserved:
+			part = cfg_file.special + part
 		parts.append(part)
 
 	string = '.'.join(parts)
