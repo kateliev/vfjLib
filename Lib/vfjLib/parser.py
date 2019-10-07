@@ -14,10 +14,9 @@
 from __future__ import absolute_import, unicode_literals, print_function
 import json, json.scanner
 
-from vfjLib.const import cfg_fileName
 from vfjLib.object import attribdict
 
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 
 # - Parsers -----------------------------------------
 # -- Vector Font JSON (VFJ)
@@ -46,15 +45,15 @@ class vfj_encoder(json.JSONEncoder):
 # Note: Parts of the File and folder names parser are based on ufoLib/filenames.py
 # Note: Copyright (c) 2005-2018, The RoboFab Developers: Erik van Blokland, Tal Leming, Just van Rossum
 
-def string2filename(string, suffix):
+def string2filename(string, suffix, mark_case=False):
+	from vfjLib.const import cfg_filename
+	
 	# - Init
-	cfg_file = cfg_fileName()
-
-	# - Initial test
-	if not isinstance(string, str):	raise ValueError('The value for string must be type(str)!')
+	cfg_file = cfg_filename()
+	if not isinstance(string, str):	string = str(string)
 
 	# - Replace an initial period with an _
-	if string[0] == '.': string = cfg_file.special + string[1:]
+	if string[0] == cfg_file.delimiter: string = cfg_file.special + string[1:]
 	
 	# - Filter the user name
 	filtered_string = []
@@ -63,7 +62,7 @@ def string2filename(string, suffix):
 		if character in cfg_file.illegal: # replace illegal characters with _
 			character = cfg_file.special
 		
-		elif character != character.lower(): # add _ to all non-lower characters
+		if mark_case and character != character.lower(): # add _ to all non-lower characters
 			character += cfg_file.special
 
 		filtered_string.append(character)
@@ -75,12 +74,12 @@ def string2filename(string, suffix):
 
 	# - Test for illegal files names
 	parts = []
-	for part in string.split('.'):
+	for part in string.split(cfg_file.delimiter):
 		if part.lower() in cfg_file.reserved:
 			part = cfg_file.special + part
 		parts.append(part)
 
-	string = '.'.join(parts)
+	string = cfg_file.delimiter.join(parts)
 
-	filename = string + suffix
+	filename = string + cfg_file.delimiter + suffix
 	return filename

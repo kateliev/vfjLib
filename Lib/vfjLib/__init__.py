@@ -22,7 +22,7 @@ from vfjLib.const import cfg_vfj
 from vfjLib.object import attribdict
 from vfjLib.parser import vfj_decoder, vfj_encoder, string2filename
 
-__version__ = '0.1.9'
+__version__ = '0.2.0'
 
 # - Objects -----------------------------------------
 class vfjFont(attribdict):
@@ -44,14 +44,21 @@ class vfjFont(attribdict):
 		json.dump(self, open(vfj_path, 'w'), cls=vfj_encoder)
 
 	def _vfj_split(self, split_path):
+
+		cfg_file = cfg_vfj()
 		split = self.font
-		root = os.path.join(split_path, self.font.info.tfn)
+
+		if os.path.isfile(split_path): 
+			root = '%s.%s' %(os.path.splitext(split_path)[0], cfg_file.major_split_suffix)
+		else:
+			root = os.path.join(split_path, string2filename(self.font.info.tfn, cfg_file.major_split_suffix))
+
 		os.mkdir(root)
 		agg = attribdict()
 
 		for key, value in split.items():
 			if isinstance(value, dict):
-				item_name ='%s.%s'%(key, vfj_split_suffix)
+				item_name ='%s.%s'%(key, cfg_file.minor_split_suffix)
 				json.dump(value, open(os.path.join(root, item_name), 'w'), cls=vfj_encoder)
 
 			elif isinstance(value, list):
@@ -59,27 +66,33 @@ class vfjFont(attribdict):
 				os.mkdir(subfolder)
 
 				for item_index in range(len(value)):
-					item_name ='%s.%s'%(key, item_index)
+					item_name = string2filename('%s.%s' %(key, item_index), cfg_file.feaure_split_suffix)
 
-					if value[item_index].has_key('name'):
-						item_name ='%s.%s'%(value[item_index].name, vfj_split_suffix)
+					if value[item_index].has_key('name') and not value[item_index].has_key('tsn'):
+						item_name = string2filename(value[item_index].name, cfg_file.glyph_split_suffix, True)
+					
+					elif value[item_index].has_key('name'):
+						item_name = string2filename(value[item_index].name, cfg_file.glyph_split_suffix)
+
 					elif value[item_index].has_key('tfn'):
-						item_name ='%s.%s'%(value[item_index].tfn, vfj_split_suffix)
+						item_name = string2filename(value[item_index].tfn, cfg_file.master_split_suffix)
+
 					elif value[item_index].has_key('fontMaster'):
-						item_name ='%s.%s'%(value[item_index].fontMaster.name, vfj_split_suffix)
+						item_name = string2filename(value[item_index].fontMaster.name, cfg_file.master_split_suffix)
 
 					json.dump(value[item_index], open(os.path.join(subfolder, item_name), 'w'), cls=vfj_encoder)
 			else:
 				agg[key] = value
 
-		json.dump(agg, open(os.path.join(root, 'more.json'), 'w'), cls=vfj_encoder)
+		json.dump(agg, open(os.path.join(root, string2filename(cfg_file.vfj_values_fileName, cfg_file.minor_split_suffix)), 'w'), cls=vfj_encoder)
 
 	def _vfj_join(self, join_path):
 		from vfjLib.object import attribdict
 		
+		cfg_file = cfg_vfj()
 		root = join_path
+		self['version'] = cfg_file.vfj_version_value
 		self['font'] = attribdict()
-		self['version'] = vfj_version
 		
 		for dirName, subdirList, fileList in os.walk(root, topdown=True):
 			if dirName == root:
@@ -87,20 +100,22 @@ class vfjFont(attribdict):
 					self.font[key] = []
 
 				for fileName in fileList:
-					self.font[fileName.split('.')[0]] = attribdict(json.load(open(os.path.join(dirName, fileName), 'r'), cls=vfj_decoder))
+					if fileName == '%s.%s' %(cfg_file.vfj_values_fileName, cfg_file.minor_split_suffix):
+						self.font.update(json.load(open(os.path.join(dirName, fileName), 'r'), cls=vfj_decoder))
+					else:
+						self.font[fileName.split('.')[0]] = json.load(open(os.path.join(dirName, fileName), 'r'), cls=vfj_decoder)
+
 			else:
 				if os.path.split(dirName)[1] in self.font.keys():
 					for fileName in fileList:
-						self.font[os.path.split(dirName)[1]].append(attribdict(json.load(open(os.path.join(dirName, fileName), 'r'), cls=vfj_decoder)))
-
-						# so far so good! fix the more.json import
+						self.font[os.path.split(dirName)[1]].append(json.load(open(os.path.join(dirName, fileName), 'r'), cls=vfj_decoder))
 
 
 	def save(self, vfj_path=None, split=False):
 		if vfj_path is None: 
 			vfj_path = self.vfj_path
 
-		if not slplit:
+		if not split:
 			self._vfj_write(vfj_path)
 		else:
 			self._vfj_split(vfj_path)
