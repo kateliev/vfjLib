@@ -22,7 +22,7 @@ from vfjLib.const import cfg_vfj
 from vfjLib.object import attribdict
 from vfjLib.parser import vfj_decoder, vfj_encoder, string2filename
 
-__version__ = '0.2.5'
+__version__ = '0.2.6'
 
 # - Objects -----------------------------------------
 class vfjFont(attribdict):
@@ -41,7 +41,7 @@ class vfjFont(attribdict):
 		self.update(json.load(open(vfj_path, 'r'), cls=vfj_decoder))
 
 	def _vfj_write(self, vfj_path):
-		json.dump(self, open(vfj_path, 'w'), cls=vfj_encoder)
+		json.dump(self, open(vfj_path, 'w'), cls=vfj_encoder, indent=4)
 
 	def _vfj_split(self, split_path):
 
@@ -59,7 +59,7 @@ class vfjFont(attribdict):
 		for key, value in split.items():
 			if isinstance(value, dict):
 				item_name ='%s.%s'%(key, cfg_file.minor_split_suffix)
-				json.dump(value, open(os.path.join(root, item_name), 'w'), cls=vfj_encoder)
+				json.dump(value, open(os.path.join(root, item_name), 'w'), cls=vfj_encoder, indent=4)
 
 			elif isinstance(value, list):
 				subfolder = os.path.join(root, key)
@@ -80,11 +80,11 @@ class vfjFont(attribdict):
 					elif value[item_index].has_key('fontMaster'):
 						item_name = string2filename(value[item_index].fontMaster.name, cfg_file.master_split_suffix)
 
-					json.dump(value[item_index], open(os.path.join(subfolder, item_name), 'w'), cls=vfj_encoder)
+					json.dump(value[item_index], open(os.path.join(subfolder, item_name), 'w'), cls=vfj_encoder, indent=4)
 			else:
 				agg[key] = value
 
-		json.dump(agg, open(os.path.join(root, string2filename(cfg_file.vfj_values_fileName, cfg_file.minor_split_suffix)), 'w'), cls=vfj_encoder)
+		json.dump(agg, open(os.path.join(root, string2filename(cfg_file.vfj_values_fileName, cfg_file.minor_split_suffix)), 'w'), cls=vfj_encoder, indent=4)
 
 	def _vfj_join(self, join_path):
 		from vfjLib.object import attribdict
