@@ -22,7 +22,7 @@ from vfjLib.const import cfg_vfj
 from vfjLib.object import attribdict
 from vfjLib.parser import vfj_decoder, vfj_encoder, string2filename
 
-__version__ = '0.2.0'
+__version__ = '0.2.5'
 
 # - Objects -----------------------------------------
 class vfjFont(attribdict):
@@ -110,6 +110,27 @@ class vfjFont(attribdict):
 					for fileName in fileList:
 						self.font[os.path.split(dirName)[1]].append(json.load(open(os.path.join(dirName, fileName), 'r'), cls=vfj_decoder))
 
+		self._vfj_rebuild_glyph_array()
+		self.font.lock()
+
+	def _vfj_rebuild_glyph_array(self):
+		glyph_base, glyph_ref, glyph_comp, glyph_other = [], [], [], []
+
+		for glyph in self.font.glyphs:
+			if glyph.contains('elementData', unicode): 
+				glyph_ref.append(glyph)
+			
+			elif glyph.contains('component'): 
+				glyph_comp.append(glyph)
+			
+			elif glyph.contains('elementData', dict):
+				if glyph not in glyph_ref and glyph not in glyph_comp:
+					glyph_base.append(glyph)
+			else:
+				glyph_other.append(glyph)
+
+		self.font.glyphs = glyph_base + glyph_ref + glyph_comp + glyph_other
+		self.font.glyphsCount = len(self.font.glyphs)		
 
 	def save(self, vfj_path=None, split=False):
 		if vfj_path is None: 

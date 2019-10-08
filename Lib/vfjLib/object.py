@@ -14,7 +14,7 @@
 from __future__ import absolute_import, unicode_literals, print_function
 from collections import defaultdict
 
-__version__ = '0.1.7'
+__version__ = '0.1.9'
 
 # - Objects ------------------------------------------
 class attribdict(defaultdict):
@@ -26,7 +26,10 @@ class attribdict(defaultdict):
 		try:
 			return object.__getattribute__(self, name)
 		except AttributeError:
-			return self[name]
+			try:
+				return self[name]
+			except KeyError:
+				raise AttributeError(name)
 		
 	def __setattr__(self, name, value):
 		if name in self.keys():
@@ -44,6 +47,25 @@ class attribdict(defaultdict):
 	def __repr__(self):
 		return '<%s: %s>' %(self.__class__.__name__, len(self.keys()))
 
+	def __hash__(self):
+		import copy
+		
+		def hash_helper(obj):
+			if isinstance(obj, (set, tuple, list)):
+				return tuple([hash_helper(element) for element in obj])    
+
+			elif not isinstance(obj, dict):
+				return hash(obj)
+
+			new_obj = {}
+
+			for key, value in obj.items():
+				new_obj[key] = hash_helper(value)
+
+			return hash(tuple(frozenset(sorted(new_obj.items()))))
+
+		return hash_helper(self)
+
 	def dir(self):
 		tree_map = ['   .%s\t%s' %(key, type(value)) for key, value in self.items()]
 		print('Attributes (Keys) map:\n%s' %('\n'.join(tree_map).expandtabs(30)))
@@ -55,45 +77,94 @@ class attribdict(defaultdict):
 		self.default_factory = None
 
 	def extract(self, search):
-		'''Pull all values of specified key (search)'''
-		array = []
-
-		def extract_helper(obj, array, search):
-			if isinstance(obj, dict):
-				for key, value in obj.items():
-					if isinstance(value, (dict, list)):
-						extract_helper(value, array, search)
-
-					elif key == search:
-						array.append(value)
-
-			elif isinstance(obj, list):
-				for item in obj:
-					extract_helper(item, array, search)
-
-			return array
-
-		results = extract_helper(self, array, search)
-		return results
-
-	def where(self, search):
-		'''Pull all objects that contain specified value (search)'''
-		array = []
+		'''Pull all values of specified key (search)
 		
-		def where_helper(obj, array, search):
+		Attributes:
+			search (Str): Search string
+
+		Returns:
+			generator
+		'''
+		
+		def extract_helper(obj, search):
 			if isinstance(obj, dict):
 				for key, value in obj.items():
-					if isinstance(value, (dict, list)):
-						where_helper(value, array, search)
-
-					elif value == search:
-						array.append(obj)
+					if key == search:
+						yield value
+					else:	
+						if isinstance(value, (dict, list)):
+							for result in extract_helper(value, search):
+								yield result
 
 			elif isinstance(obj, list):
 				for item in obj:
-					where_helper(item, array, search)
+					for result in extract_helper(item, search):
+						yield result
 
-			return array
+		return extract_helper(self, search)
 
-		results = where_helper(self, array, search)
-		return results
+	def where(self, search, search_type=None):
+		'''Pull all objects that contain values of specified search.
+		
+		Attributes:
+			search (Str): Search string
+			search_type (type) : Value type
+		Returns:
+			generator
+		'''
+		def isisntance_plus(entity, test_type):
+			if test_type is not None:
+				return isinstance(entity, test_type)
+			else:
+				return True
+
+		def where_helper(obj, search):
+			if isinstance(obj, dict):
+				for key, value in obj.items():
+					if key == search and isisntance_plus(value, search_type):
+						yield obj
+					else:	
+						if isinstance(value, (dict, list)):
+							for result in where_helper(value, search):
+								yield result
+
+			elif isinstance(obj, list):
+				for item in obj:
+					for result in where_helper(item, search):
+						yield result
+
+		return where_helper(self, search)
+
+	def contains(self, search, search_type=None):
+		'''Does the object contain ANY value or nested object with given name (search)
+		
+		Attributes:
+			search (Str): Search string
+			search_type (type) : Value type
+
+		Returns:
+			Bool
+		'''
+		def isisntance_plus(entity, test_type):
+			if test_type is not None:
+				return isinstance(entity, test_type)
+			else:
+				return True
+		
+		def contains_helper(obj, search):
+			if isinstance(obj, dict):
+				for key, value in obj.items():
+					if search in key and isisntance_plus(value, search_type):
+						yield True
+					else:
+						if isinstance(value, (dict, list)):
+							for result in contains_helper(value, search):
+								yield result
+
+			elif isinstance(obj, list):
+				for item in obj:
+					for result in contains_helper(item, search):
+						yield result
+			
+			
+		return any(list(contains_helper(self, search)))
