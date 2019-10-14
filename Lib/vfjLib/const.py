@@ -13,7 +13,7 @@
 
 from __future__ import unicode_literals
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 # - VFJ Specific -------------------------------------
 class cfg_vfj(object):
@@ -24,6 +24,7 @@ class cfg_vfj(object):
 
 		self.major_split_suffix = 'svfj'
 		self.minor_split_suffix = 'json'
+		self.new_suffix = 'new'
 		self.glyph_split_suffix = self.minor_split_suffix
 		self.feaure_split_suffix = self.minor_split_suffix
 		self.master_split_suffix = self.minor_split_suffix

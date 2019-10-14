@@ -14,15 +14,14 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-import json
-import json.scanner
-import os
+import os, shutil
+import json, json.scanner
 
 from vfjLib.const import cfg_vfj
 from vfjLib.object import attribdict
 from vfjLib.parser import vfj_decoder, vfj_encoder, string2filename
 
-__version__ = '0.2.7'
+__version__ = '0.2.8'
 
 # - Objects -----------------------------------------
 class vfjFont(attribdict):
@@ -40,22 +39,53 @@ class vfjFont(attribdict):
 		self.vfj_path = vfj_path
 		self.update(json.load(open(vfj_path, 'r'), cls=vfj_decoder))
 
-	def _vfj_write(self, vfj_path):
+	def _vfj_write(self, vfj_path, overwrite=True):
+		if os.path.exists(vfj_path):
+			if not overwrite:
+				counter = 0
+				prefix, ext = os.path.splitext(vfj_path)
+
+				# - Handle clash - give unique filename
+				while os.path.isfile(vfj_path):
+					counter += 1 
+					vfj_path = '%s.%s%s' %(prefix, counter, ext)
+			
 		json.dump(self, open(vfj_path, 'w'), cls=vfj_encoder, sort_keys=True, indent=4)
 
-	def _vfj_split(self, split_path):
+	def _vfj_split(self, split_path, overwrite=False):
+		'''Splits a single VFJ file into Split VFJ Format (folder).'''
 
+		# - Init
 		cfg_file = cfg_vfj()
 		split = self.font
 
+		# - Create path
 		if os.path.isfile(split_path): 
-			root = '%s.%s' %(os.path.splitext(split_path)[0], cfg_file.major_split_suffix)
+			root = os.path.splitext(split_path)[0]
 		else:
-			root = os.path.join(split_path, string2filename(self.font.info.tfn, cfg_file.major_split_suffix))
+			root = os.path.join(split_path, string2filename(self.font.info.tfn))
 
+		# - Handle existing write path
+		test_root = '%s.%s' %(root, cfg_file.major_split_suffix)
+		
+		if os.path.exists(test_root):
+			if overwrite:
+				shutil.rmtree(test_root)
+			else:
+				counter = 0
+				
+				# - Handle clash - give unique folder name
+				while os.path.exists(test_root):
+					counter += 1 
+					test_root = '%s.%s.%s' %(root, counter, cfg_file.major_split_suffix)
+		
+		root = test_root			
 		os.mkdir(root)
+		
+		# - Setup aggregation dict to contain all loose values
 		agg = attribdict()
 
+		# - Process split
 		for key, value in split.items():
 			if isinstance(value, dict):
 				item_name ='%s.%s'%(key, cfg_file.minor_split_suffix)
@@ -86,11 +116,13 @@ class vfjFont(attribdict):
 
 		json.dump(agg, open(os.path.join(root, string2filename(cfg_file.vfj_values_fileName, cfg_file.minor_split_suffix)), 'w'), cls=vfj_encoder, sort_keys=True, indent=4)
 
-	def _vfj_join(self, join_path):
+	def _vfj_merge(self, merge_path):
+		'''Merges a Split VFJ Format (folder) into single VFJ file.'''
+
 		from vfjLib.object import attribdict
 		
 		cfg_file = cfg_vfj()
-		root = join_path
+		root = merge_path
 		self['version'] = cfg_file.vfj_version_value
 		self['font'] = attribdict()
 		
@@ -114,6 +146,8 @@ class vfjFont(attribdict):
 		self.font.lock()
 
 	def _vfj_rebuild_glyph_array(self):
+		''' Reorders glyphs so that the base glyphs are first and glyphs that are references are last.'''
+
 		glyph_base, glyph_ref, glyph_comp, glyph_other = [], [], [], []
 
 		for glyph in self.font.glyphs:
@@ -132,17 +166,17 @@ class vfjFont(attribdict):
 		self.font.glyphs = glyph_base + glyph_ref + glyph_comp + glyph_other
 		self.font.glyphsCount = len(self.font.glyphs)		
 
-	def save(self, vfj_path=None, split=False):
+	def save(self, vfj_path=None, split=False, overwrite=False):
 		if vfj_path is None: 
 			vfj_path = self.vfj_path
 
 		if not split:
-			self._vfj_write(vfj_path)
+			self._vfj_write(vfj_path, overwrite)
 		else:
-			self._vfj_split(vfj_path)
+			self._vfj_split(vfj_path, overwrite)
 
-	def open(self, vfj_path=None, join=False):
-		if not join:
+	def open(self, vfj_path=None, merge=False):
+		if not merge:
 			self._vfj_read(vfj_path)
 		else:
-			self._vfj_join(vfj_path)
+			self._vfj_merge(vfj_path)
