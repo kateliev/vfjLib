@@ -14,14 +14,15 @@
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-import os, shutil
+import os, shutil, copy
 import json, json.scanner
+from collections import OrderedDict
 
 from vfjLib.const import cfg_vfj
 from vfjLib.object import attribdict
 from vfjLib.parser import vfj_decoder, vfj_encoder, string2filename
 
-__version__ = '0.2.8'
+__version__ = '0.2.9'
 
 # - Objects -----------------------------------------
 class vfjFont(attribdict):
@@ -35,6 +36,7 @@ class vfjFont(attribdict):
 		else:
 			return '<%s name=None, masters=None, glyphs=None, version=None>' %self.__class__.__name__
 
+	# - Internals --------------------------------------------------
 	def _vfj_read(self, vfj_path):
 		self.vfj_path = vfj_path
 		self.update(json.load(open(vfj_path, 'r'), cls=vfj_decoder))
@@ -166,6 +168,8 @@ class vfjFont(attribdict):
 		self.font.glyphs = glyph_base + glyph_ref + glyph_comp + glyph_other
 		self.font.glyphsCount = len(self.font.glyphs)		
 
+	# - Externals --------------------------------------------------
+	# -- I/O -------------------------------------------------------
 	def save(self, vfj_path=None, split=False, overwrite=False):
 		if vfj_path is None: 
 			vfj_path = self.vfj_path
@@ -180,3 +184,48 @@ class vfjFont(attribdict):
 			self._vfj_read(vfj_path)
 		else:
 			self._vfj_merge(vfj_path)
+
+	# - Glyphs -----------------------------------------------------
+	def getGlyphSet(self, layer_name=None, link_data=False):
+		# - Init
+		glyphs_dict = OrderedDict()
+		layer_name = self.font.defaultMaster if layer_name is None else layer_name
+
+		# - Process
+		if hasattr(self.font, 'glyphs') and len(self.font.glyphs):
+			for glyph in self.font.glyphs:
+				if hasattr(glyph, 'layers') and len(glyph.layers):
+					if link_data: 	
+						# Override all, just relink the original data to the dictionary (keeps original FL structure)
+						glyphs_dict[glyph.name] = glyph
+					else: 			
+						# Create a deep copy and get only the layer needed
+						layer_found = False
+						glyph_copy = copy.deepcopy(glyph)
+
+						for layer in glyph_copy.layers:
+							if layer.name == layer_name:
+								layer_found = True
+								glyph_copy.layers = [layer]
+								break
+
+						if layer_found and len(glyph_copy.layers) == 1:
+							glyphs_dict[glyph_copy.name] = glyph_copy
+
+		return glyphs_dict
+
+	def getCharacterMapping(self, layer_name=None):
+		# - Init
+		unicodes_dict = OrderedDict()
+		layer_name = self.font.defaultMaster if layer_name is None else layer_name
+
+		# - Process
+		if hasattr(self.font, 'glyphs') and len(self.font.glyphs):
+			for glyph in self.font.glyphs:
+				if hasattr(glyph, 'unicode') and len(glyph.unicode):
+					unicodes_dict.setdefault(glyph.unicode, []).append(glyph.name)
+
+		return unicodes_dict
+
+
+
