@@ -19,6 +19,11 @@ __version__ = '0.1.1'
 class cfg_vfj(object):
 	def __init__(self):
 		self.delimiter = '.'
+		self.delimiter_point = ' '
+		self.delimiter_node = self.delimiter_point*2
+		self.node_smooth = 's'
+		self.node_close = 'c'
+
 		self.vfj_version_value = 8 			# Current VFJ version according to FL
 		self.vfj_values_fileName = 'values' # Special filename to hold all standalone values
 
