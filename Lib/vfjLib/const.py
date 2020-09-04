@@ -23,6 +23,8 @@ class cfg_vfj(object):
 		self.delimiter_node = self.delimiter_point*2
 		self.node_smooth = 's'
 		self.node_close = 'c'
+		self.node_ttOffcurve = 'o'
+		self.node_g2 = 'g2'
 
 		self.vfj_version_value = 8 			# Current VFJ version according to FL
 		self.vfj_values_fileName = 'values' # Special filename to hold all standalone values
