@@ -19,16 +19,19 @@ import json, json.scanner
 from collections import OrderedDict
 
 from vfjLib.const import cfg_vfj
-from vfjLib.object import attribdict
+from vfjLib.object import attribdict, dictextractor
 from vfjLib.parser import vfj_decoder, vfj_encoder, string2filename
+from vfjLib.proxy import jGlyph
 
-__version__ = '0.2.9'
+__version__ = '0.3.1'
 
 # - Objects -----------------------------------------
 class vfjFont(attribdict):
 	def __init__(self, vfj_path=None):
-		self.vfj_path = vfj_path		
+		self.vfj_path = vfj_path
 		if self.vfj_path is not None: self._vfj_read(self.vfj_path)
+
+		self.__glyphs_cache = []
 
 	def __repr__(self):
 		if len(self.keys()):
@@ -168,6 +171,47 @@ class vfjFont(attribdict):
 		self.font.glyphs = glyph_base + glyph_ref + glyph_comp + glyph_other
 		self.font.glyphsCount = len(self.font.glyphs)		
 
+	def _vfj_split_glyphs_master(self):
+		''' Splits glyphs by master.'''
+		masters = self.getMasterNames()
+		glyph_layer_dict = {master_name:[] for master_name in masters}
+
+		# - Split glyphs by layers
+		if hasattr(self.font, 'glyphs') and len(self.font.glyphs):
+			for glyph in self.font.glyphs:
+				if hasattr(glyph, 'layers') and len(glyph.layers):
+					for master_name in masters:
+						layer_search = list(dictextractor.where(glyph.layers, master_name, 'name'))
+						if len(layer_search):
+							new_glyph = attribdict(glyph)
+							new_glyph.layers = layer_search
+							glyph_layer_dict[master_name].append(new_glyph)
+
+		return glyph_layer_dict
+
+	def _vfj_split_font_master(self):
+		''' Split font into multiple single master fonts.'''
+		font_layer_list = []
+		masters = self.getMasterNames()
+		glyph_layer_dict = self._vfj_split_glyphs_master()
+				
+		if hasattr(self.font, 'masters') and len(self.font.masters):
+			# - Split everything else
+			for master_name in masters:
+				new_font = copy.deepcopy(self)
+				new_font.lock()
+
+				new_font.font.pop('axes', None)
+				new_font.font.pop('instaces', None)
+				
+				new_font.font.defaultMaster = master_name
+				new_font.font.masters = [attribdict({'fontMaster':list(dictextractor.where(self.font.masters, master_name, 'name'))[0]})]
+				new_font.font.glyphs = glyph_layer_dict[master_name]
+				
+				font_layer_list.append(new_font)
+
+			return font_layer_list
+
 	# - Externals --------------------------------------------------
 	# -- I/O -------------------------------------------------------
 	def save(self, vfj_path=None, split=False, overwrite=False):
@@ -185,34 +229,28 @@ class vfjFont(attribdict):
 		else:
 			self._vfj_merge(vfj_path)
 
+	# - Layers -----------------------------------------------------
+	def getMasterNames(self):
+		return [item.name for item in self.extract('fontMaster')]
+
 	# - Glyphs -----------------------------------------------------
-	def getGlyphSet(self, layer_name=None, link_data=False):
+	def getGlyphSet(self, layer_name=None, use_cache=True, extend=None):
 		# - Init
-		glyphs_dict = OrderedDict()
 		layer_name = self.font.defaultMaster if layer_name is None else layer_name
+		glyphs_dict = OrderedDict()
 
 		# - Process
 		if hasattr(self.font, 'glyphs') and len(self.font.glyphs):
-			for glyph in self.font.glyphs:
-				if hasattr(glyph, 'layers') and len(glyph.layers):
-					if link_data: 	
-						# Override all, just relink the original data to the dictionary (keeps original FL structure)
-						glyphs_dict[glyph.name] = glyph
-					else: 			
-						# Create a deep copy and get only the layer needed
-						layer_found = False
-						glyph_copy = copy.deepcopy(glyph)
+			if not use_cache or not len(self.__glyphs_cache):
+				self.__glyphs_cache = self._vfj_split_glyphs_master()
+							
+			layer_glyphs = self.__glyphs_cache[layer_name]
 
-						for layer in glyph_copy.layers:
-							if layer.name == layer_name:
-								layer_found = True
-								glyph_copy.layers = [layer]
-								break
-
-						if layer_found and len(glyph_copy.layers) == 1:
-							glyphs_dict[glyph_copy.name] = glyph_copy
+			for glyph in layer_glyphs:
+				glyphs_dict[glyph.name] = glyph if extend is None else extend(glyph)
 
 		return glyphs_dict
+
 
 	def getCharacterMapping(self, layer_name=None):
 		# - Init

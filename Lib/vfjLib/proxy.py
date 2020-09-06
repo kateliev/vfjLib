@@ -12,10 +12,10 @@
 # that you use it at your own risk!
 
 from __future__ import absolute_import, unicode_literals, print_function
-from vfjLib.object import attribdict
+from vfjLib.object import attribdict, dictextractor
 from vfjLib.const import cfg_vfj
 
-__version__ = '0.0.1'
+__version__ = '0.1.5'
 
 # - Init ---------------------------------------------
 current_config = cfg_vfj()
@@ -51,13 +51,13 @@ class jPoint(object):
 
 class jNode(object):
 	'''jNode'''
-	def __init__(self, x=None, y=None, nodeType=None, nodeSmooth=False, nodeG2=False, nodeName=None, nodeId=None, transform=None):
+	def __init__(self, x=None, y=None, node_type=None, node_smooth=False, node_g2=False, node_name=None, node_id=None, transform=None):
 		self.x, self.y = x, y
-		self.id = nodeId
-		self.g2 = nodeG2
-		self.name = nodeName
-		self.type = nodeType
-		self.smooth = nodeSmooth
+		self.id = node_id
+		self.g2 = node_g2
+		self.name = node_name
+		self.type = node_type
+		self.smooth = node_smooth
 		self.transform = transform
 
 	def __repr__(self):
@@ -92,14 +92,14 @@ class jNode(object):
 		node_type = 'offcurve' if len(string_list) >= 3 and current_config.node_ttOffcurve in string_list else None
 		node_g2 = True if len(string_list) >= 3 and current_config.node_g2 in string_list else False
 
-		return jNode(float(string_list[0]), float(string_list[1]), nodeType=node_type, nodeSmooth=node_smooth, nodeG2=node_g2, nodeName=None, nodeId=None)
+		return jNode(float(string_list[0]), float(string_list[1]), node_type=node_type, node_smooth=node_smooth, node_g2=node_g2, node_name=None, node_id=None)
 
 class jContour(object):
 	'''jContour'''
-	def __init__(self, jNodeList=[], isOpen=False, contourId=None, transform=None):
+	def __init__(self, jNodeList=[], is_open=False, contour_id=None, transform=None):
 		self.nodes = jNodeList
-		self.open = isOpen
-		self.id = contourId
+		self.open = is_open
+		self.id = contour_id
 		self.transform = transform
 
 	def __repr__(self):
@@ -132,8 +132,8 @@ class jContour(object):
 		return self.string
 
 	@staticmethod
-	def loads(stringList, isOpen=False, transform=None):
-		contour_open = isOpen
+	def loads(stringList, is_open=False, transform=None):
+		contour_open = is_open
 		contour_nodes = []
 		
 		node_first = True
@@ -189,14 +189,24 @@ class jElement(attribdict):
 				contour.lock()
 				contour_nodes = contour.nodes
 				contour_open = contour.open if hasattr(contour, 'open') else False
-				
-				contour_transform = contour.transform if hasattr(contour, 'transform') else None
-				new_contours_container.append(jContour.loads(contour_nodes, contour_open, contour_transform))
+				contour_transform = dict(contour.transform.items()) if hasattr(contour, 'transform') else None
+				new_element = jContour.loads(contour_nodes, contour_open, contour_transform)
+				new_contours_container.append(new_element)
 
 			self.contours = new_contours_container
 	
 	def __repr__(self):
 		return '<{}: contours={}, transform={}>'.format(self.__class__.__name__, len(self.contours), self.transform if hasattr(self, 'transform') else None)
+
+class jComponent(attribdict):
+	'''jComponent'''
+	def __init__(self, data):
+		super(jComponent, self).__init__(data)
+		self.lock()
+		self.base = self.glyphName
+
+	def __repr__(self):
+		return '<{}: name={}, transform={}>'.format(self.__class__.__name__, self.glyphName, self.transform if hasattr(self, 'transform') else None)
 
 class jLayer(attribdict):
 	'''jLayer'''
@@ -204,27 +214,60 @@ class jLayer(attribdict):
 		super(jLayer, self).__init__(data)
 		self.lock()
 
-		if hasattr(self, 'elements'):
+		if hasattr(self, 'elements') and len(self.elements):
 			new_elements_container = []
 			
 			for element in self.elements:
 				element.lock()
-				new_element = jElement(element.elementData)
-				if hasattr(element, 'transform'): new_element.transform = element.transform
-				new_elements_container.append(new_element)
+				
+				if hasattr(element, 'elementData') and len(element.elementData):
+					element.elementData.pop('locked', None)
+					new_element = jElement(element.elementData)
+					if hasattr(element, 'transform'): new_element.transform = dict(element.transform.items())
+					new_elements_container.append(new_element)
+
+				if hasattr(element, 'component'):
+					element.component.pop('locked', None)
+					new_element = jComponent(element.component)
+					if hasattr(element, 'transform'): new_element.transform = dict(element.transform.items())
+					new_elements_container.append(new_element)
 
 			self.elements = new_elements_container
 
 	def __repr__(self):
-		return '<{}: elements={}, transform={}>'.format(self.__class__.__name__, len(self.elements), self.transform if hasattr(self, 'transform') else None)
+		return '<{}: name={}, elements={}>'.format(self.__class__.__name__, self.name, len(self.elements))
+
+class jGlyph(attribdict):
+	'''jGlyph'''
+	def __init__(self, data):
+		super(jGlyph, self).__init__(data)
+		self.lock()
+
+		if hasattr(self, 'layers') and len(self.layers):
+			new_layers_container = []
+			
+			for layer in self.layers:
+				layer.lock()
+				new_layer = jLayer(layer)
+				new_layers_container.append(new_layer)
+
+			self.layers = new_layers_container
+
+	def __repr__(self):
+		return '<{}: name={}, unicode={}, layers={}>'.format(self.__class__.__name__, self.name, self.unicode, len(self.layers))		
 
 
 # -- Test --------------------------------------
 if __name__ == '__main__':
 	from vfjLib import vfjFont
-	vf = vfjFont(r'd:\Achates-3Wd.vfj')
+	#vf = vfjFont(r'd:\Achates-3Wd.vfj')
+	vf = vfjFont(r'd:\dida.vfj')
+	#gs = vf.getGlyphSet(extend=jGlyph)
 	gs = vf.getGlyphSet()
-	ll = gs['O'].layers[0]
+	print(gs['Q'].layers[0].dir())
+	#ll = gs['Odieresis'].layers[0]
+	#jg = jGlyph(gs['Odieresis'])
 	#print(ll.elements[0].elementData.contours)
-	print(jLayer(ll))
+	#print(jLayer(ll).anchors[0].dir())
+	#print(jg.layers[0].elements[1].contours[0].nodes[0])
 	

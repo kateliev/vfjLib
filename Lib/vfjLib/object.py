@@ -14,9 +14,141 @@
 from __future__ import absolute_import, unicode_literals, print_function
 from collections import defaultdict
 
-__version__ = '0.1.9'
+__version__ = '0.2.1'
 
 # - Objects ------------------------------------------
+class dictextractor:
+	'''A collection of dicionary value extractors'''
+
+	@staticmethod
+	def extract(obj, search):
+		'''Pull all values of specified key (search)
+		
+		Attributes:
+			search (Str): Search string
+
+		Returns:
+			generator
+		'''
+		
+		def extract_helper(obj, search):
+			if isinstance(obj, dict):
+				for key, value in obj.items():
+					if key == search:
+						yield value
+					else:	
+						if isinstance(value, (dict, list)):
+							for result in extract_helper(value, search):
+								yield result
+
+			elif isinstance(obj, list):
+				for item in obj:
+					for result in extract_helper(item, search):
+						yield result
+
+		return extract_helper(obj, search)
+
+	@staticmethod
+	def find(obj, search, search_type=None):
+		'''Pull all objects that contain keys of specified search.
+		
+		Attributes:
+			search (Str): Search string
+			search_type (type) : Value type
+		Returns:
+			generator
+		'''
+		def isisntance_plus(entity, test_type):
+			if test_type is not None:
+				return isinstance(entity, test_type)
+			else:
+				return True
+
+		def where_helper(obj, search):
+			if isinstance(obj, dict):
+				for key, value in obj.items():
+					if key == search and isisntance_plus(value, search_type):
+						yield obj
+					else:	
+						if isinstance(value, (dict, list)):
+							for result in where_helper(value, search):
+								yield result
+
+			elif isinstance(obj, list):
+				for item in obj:
+					for result in where_helper(item, search):
+						yield result
+
+		return where_helper(obj, search)
+
+	@staticmethod
+	def where(obj, search_value, search_key=None):
+		'''Pull all objects that contain values of specified search.
+		
+		Attributes:
+			search_value (Str): Search value
+			search_key (Str) : Search for specific key that contains above value
+		Returns:
+			generator
+		'''
+		def eq_plus(test, pass_test):
+			if pass_test is not None:
+				return test
+			else:
+				return True
+
+		def where_helper(obj, search_value):
+			if isinstance(obj, dict):
+				for key, value in obj.items():
+					if value == search_value and eq_plus(key==search_key, search_key):
+						yield obj
+					else:	
+						if isinstance(value, (dict, list)):
+							for result in where_helper(value, search_value):
+								yield result
+
+			elif isinstance(obj, list):
+				for item in obj:
+					for result in where_helper(item, search_value):
+						yield result
+
+		return where_helper(obj, search_value)
+
+	@staticmethod
+	def contains(obj, search, search_type=None):
+		'''Does the object contain ANY value or nested object with given name (search)
+		
+		Attributes:
+			search (Str): Search string
+			search_type (type) : Value type
+
+		Returns:
+			Bool
+		'''
+		def isisntance_plus(entity, test_type):
+			if test_type is not None:
+				return isinstance(entity, test_type)
+			else:
+				return True
+		
+		def contains_helper(obj, search):
+			if isinstance(obj, dict):
+				for key, value in obj.items():
+					if search in key and isisntance_plus(value, search_type):
+						yield True
+					else:
+						if isinstance(value, (dict, list)):
+							for result in contains_helper(value, search):
+								yield result
+
+			elif isinstance(obj, list):
+				for item in obj:
+					for result in contains_helper(item, search):
+						yield result
+			
+			
+		return any(list(contains_helper(obj, search)))
+
 class attribdict(defaultdict):
 	'''	Default dictionary where keys can be accessed as attributes	'''
 	def __init__(self, *args, **kwdargs):
@@ -85,26 +217,10 @@ class attribdict(defaultdict):
 		Returns:
 			generator
 		'''
-		
-		def extract_helper(obj, search):
-			if isinstance(obj, dict):
-				for key, value in obj.items():
-					if key == search:
-						yield value
-					else:	
-						if isinstance(value, (dict, list)):
-							for result in extract_helper(value, search):
-								yield result
-
-			elif isinstance(obj, list):
-				for item in obj:
-					for result in extract_helper(item, search):
-						yield result
-
-		return extract_helper(self, search)
-
-	def where(self, search, search_type=None):
-		'''Pull all objects that contain values of specified search.
+		return dictextractor.extract(self, search)
+				
+	def find(self, search, search_type=None):
+		'''Pull all objects that contain keys of specified search.
 		
 		Attributes:
 			search (Str): Search string
@@ -112,28 +228,18 @@ class attribdict(defaultdict):
 		Returns:
 			generator
 		'''
-		def isisntance_plus(entity, test_type):
-			if test_type is not None:
-				return isinstance(entity, test_type)
-			else:
-				return True
+		return dictextractor.find(self, search, search_type)
 
-		def where_helper(obj, search):
-			if isinstance(obj, dict):
-				for key, value in obj.items():
-					if key == search and isisntance_plus(value, search_type):
-						yield obj
-					else:	
-						if isinstance(value, (dict, list)):
-							for result in where_helper(value, search):
-								yield result
-
-			elif isinstance(obj, list):
-				for item in obj:
-					for result in where_helper(item, search):
-						yield result
-
-		return where_helper(self, search)
+	def where(self, search_value, search_key=None):
+		'''Pull all objects that contain values of specified search.
+		
+		Attributes:
+			search_value (Str): Search value
+			search_key (Str) : Search for specific key that contains above value
+		Returns:
+			generator
+		'''
+		return dictextractor.where(self, search_value, search_key)
 
 	def contains(self, search, search_type=None):
 		'''Does the object contain ANY value or nested object with given name (search)
@@ -145,26 +251,5 @@ class attribdict(defaultdict):
 		Returns:
 			Bool
 		'''
-		def isisntance_plus(entity, test_type):
-			if test_type is not None:
-				return isinstance(entity, test_type)
-			else:
-				return True
+		return dictextractor.contains(self, search, search_type)
 		
-		def contains_helper(obj, search):
-			if isinstance(obj, dict):
-				for key, value in obj.items():
-					if search in key and isisntance_plus(value, search_type):
-						yield True
-					else:
-						if isinstance(value, (dict, list)):
-							for result in contains_helper(value, search):
-								yield result
-
-			elif isinstance(obj, list):
-				for item in obj:
-					for result in contains_helper(item, search):
-						yield result
-			
-			
-		return any(list(contains_helper(self, search)))
