@@ -1,7 +1,7 @@
 # encoding:	utf-8
 # ----------------------------------------------------
 # SCRIPT: 	vfj2git
-# DESC:		A tool for manipulating VFJ fonts into Git friendly format
+# DESC: A tool for manipulating VFJ fonts into Git friendly format
 # ----------------------------------------------------
 # (C) Vassil Kateliev, 2019  (http://www.kateliev.com)
 # (C) Karandash Type Foundry (http://www.karandash.eu)
