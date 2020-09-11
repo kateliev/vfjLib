@@ -23,13 +23,13 @@ __version__ = '0.1.9'
 class vfj_decoder(json.JSONDecoder):
 	def __init__(self, *args, **kwdargs):
 		super(vfj_decoder, self).__init__(*args, **kwdargs)
-		self.__parse_object = self.parse_object
-		self.parse_object = self._parse_object
+		self.L0_parse_object = self.parse_object
+		self.parse_object = self.L1_parse_object
 		self.scan_once = json.scanner.py_make_scanner(self)
 		self.__tree_class = attribdict
 	
-	def _parse_object(self, *args, **kwdargs):
-		result = self.__parse_object(*args, **kwdargs)
+	def L1_parse_object(self, *args, **kwdargs):
+		result = self.L0_parse_object(*args, **kwdargs)
 		tree_obj = self.__tree_class(result[0])
 		tree_obj.lock() # Lock the tree - no further editing allowed
 		return tree_obj, result[1]
