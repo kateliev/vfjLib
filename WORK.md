@@ -29,3 +29,7 @@ proposal hashes and full diffs. Independent review precedes guarded application.
 Later application, tests, commits, pushes and integration belong in the external
 Issue 230 live ledger. No such result is claimed by this authoring entry.
 Preserve Vassil Kateliev’s authorship and BSD 3-Clause terms in LICENSE.
+
+## 2026-11-10 — integration-round guidance
+
+Added the owner’s round-by-round review, upstream reconciliation and backlog-maintenance rule to AGENTS. This is documentation-only preparation; independent review and applicable repository checks remain required before delivery. No runtime, installation, native or publication acceptance is asserted.

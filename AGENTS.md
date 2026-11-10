@@ -61,3 +61,9 @@ The D31 zone/master lane remains reserved. D29 generation/publication gates appl
 This repository integrates qualified work into `master`.
 
 Preserve Vassil Kateliev’s authorship and BSD 3-Clause terms in LICENSE.
+
+## Integration rounds
+
+After each important round, independently verify the result, refresh the actual upstream main (or existing default branch), and reconcile concurrent team work in an isolated successor. Integrate qualified changes upstream through normal gates without force-pushing. Move only verified solved TODO items to cumulative CHANGELOG, update PLAN for remaining work, and continue the authorized backlog. Existing preservation rules, exclusions, pauses, native/install restrictions, private P/L holds and capability gates remain in force.
+
+`master` remains the existing default; source-push permission does not grant administration, default-branch or Pages-setting authority.
